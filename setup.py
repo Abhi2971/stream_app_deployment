@@ -8,9 +8,9 @@ from pymongo import MongoClient
 
 def print_header():
     """Print setup header"""
-    print("=" * 10)
-    print("  📚 Student Assignment Tracker - Setup Wizard")
-    print("=" * 10)
+    # print("=" * 10)
+    # print("  📚 Student Assignment Tracker - Setup Wizard")
+    # print("=" * 10)
     print()
 
 def check_python_version():
