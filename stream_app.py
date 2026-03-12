@@ -245,159 +245,240 @@ def fetch_commits_and_files(owner, repo, db, headers, name):
 
 def login():
     """User login page with enhanced UI"""
+
     st.markdown("""
     <div class="app-header">
         <h1>🔑 Login to Your Account</h1>
         <p>Access your personalized dashboard</p>
     </div>
     """, unsafe_allow_html=True)
-    
+
     client = MongoClient(config.MONGODB_CONNECTION_STRING)
     login_db = client[config.LOGIN_DATA_DB]
-    
+
     with st.form("login_form"):
-        username = st.text_input("👤 Username", placeholder="Enter your username")
-        password = st.text_input("🔒 Password", type="password", placeholder="Enter your password")
-        
+
+        username = st.text_input(
+            "👤 Username",
+            placeholder="Enter your username"
+        )
+
+        password = st.text_input(
+            "🔒 Password",
+            type="password",
+            placeholder="Enter your password"
+        )
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
-            submit = st.form_submit_button("🚀 Login", width='stretch')
-        
+            login_submit = st.form_submit_button("🚀 Login", width="stretch")
+
         with col2:
-            if st.form_submit_button("📝 Need an account?", width='stretch'):
-                st.session_state.current_page = "Register"
-                st.rerun()
-        
-        if submit:
-            if not username or not password:
-                st.error("⚠️ Please fill in all fields")
-                return
-            
-            user = login_db.users.find_one({"username": username, "password": password})
-            
-            if user:
-                st.session_state.logged_in = True
-                st.session_state.username = username
-                st.session_state.role = user["role"]
-                
-                # Update last login
-                login_db.users.update_one(
-                    {"username": username},
-                    {"$set": {"last_login": datetime.now().isoformat()}}
-                )
-                
-                st.success(f"✅ Welcome {user['name']}!")
-                add_activity_log(login_db, username, "Login", "User logged in")
-                
-                if user["role"] == "admin":
-                    st.session_state.current_page = "Admin Dashboard"
-                else:
-                    # Fetch GitHub data for students
-                    github_link = user['github_link']
-                    github_token = user['github_token']
-                    name = user['name']
-                    owner, repo = extract_owner_repo(github_link)
-                    
-                    if owner and repo:
-                        HEADERS = {"Authorization": f"token {github_token}"}
-                        
-                        with st.spinner('🔄 Fetching your latest GitHub data...'):
-                            if check_repo_visibility(owner, repo, HEADERS):
-                                db = client[config.JAVA_FILE_ANALYSIS_DB]
-                                fetch_commits_and_files(owner, repo, db, HEADERS, name)
-                                st.success("✅ Data synced successfully!")
-                    
-                    st.session_state.current_page = "Student Dashboard"
-                
-                st.rerun()
+            goto_register = st.form_submit_button("📝 Need an account?", width="stretch")
+
+    # Handle navigation
+    if goto_register:
+        st.session_state.current_page = "Register"
+        st.rerun()
+
+    # Handle login
+    if login_submit:
+
+        if not username or not password:
+            st.error("⚠️ Please fill in all fields")
+            return
+
+        user = login_db.users.find_one({
+            "username": username,
+            "password": password
+        })
+
+        if user:
+
+            st.session_state.logged_in = True
+            st.session_state.username = username
+            st.session_state.role = user["role"]
+
+            # Update last login
+            login_db.users.update_one(
+                {"username": username},
+                {"$set": {"last_login": datetime.now().isoformat()}}
+            )
+
+            st.success(f"✅ Welcome {user['name']}!")
+
+            add_activity_log(
+                login_db,
+                username,
+                "Login",
+                "User logged in"
+            )
+
+            # Admin dashboard
+            if user["role"] == "admin":
+                st.session_state.current_page = "Admin Dashboard"
+
             else:
-                st.error("❌ Invalid username or password")
+
+                github_link = user["github_link"]
+                github_token = user["github_token"]
+                name = user["name"]
+
+                owner, repo = extract_owner_repo(github_link)
+
+                if owner and repo:
+
+                    HEADERS = {
+                        "Authorization": f"token {github_token}"
+                    }
+
+                    with st.spinner("🔄 Fetching your latest GitHub data..."):
+
+                        if check_repo_visibility(owner, repo, HEADERS):
+
+                            db = client[config.JAVA_FILE_ANALYSIS_DB]
+
+                            fetch_commits_and_files(
+                                owner,
+                                repo,
+                                db,
+                                HEADERS,
+                                name
+                            )
+
+                            st.success("✅ Data synced successfully!")
+
+                st.session_state.current_page = "Student Dashboard"
+
+            st.rerun()
+
+        else:
+            st.error("❌ Invalid username or password")
+
 
 def register_user():
     """User registration page with enhanced UI"""
+
     st.markdown("""
     <div class="app-header">
         <h1>📝 Create Your Account</h1>
         <p>Join the student assignment tracking system</p>
     </div>
     """, unsafe_allow_html=True)
-    
+
     client = MongoClient(config.MONGODB_CONNECTION_STRING)
     login_db = client[config.LOGIN_DATA_DB]
-    
+
     with st.form("registration_form"):
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
-            name = st.text_input("👤 Full Name", placeholder="Enter your full name")
-            username = st.text_input("🆔 Username", placeholder="e.g., AF0442897")
-        
+            name = st.text_input(
+                "👤 Full Name",
+                placeholder="Enter your full name"
+            )
+
+            username = st.text_input(
+                "🆔 Username",
+                placeholder="e.g., AF0442897"
+            )
+
         with col2:
-            github_link = st.text_input("🔗 GitHub Repository", placeholder="https://github.com/username/repo")
-            github_token = st.text_input("🔑 GitHub Token", type="password", placeholder="Your GitHub personal access token")
-        
-        password = st.text_input("🔒 Password", type="password", placeholder="Create a strong password")
-        
-        submit = st.form_submit_button("✅ Register", width='stretch')
-        
-        if submit:
-            errors = []
-            if not name.strip():
-                errors.append("Name is required")
-            if not validate_username(username):
-                errors.append("Invalid username format (e.g., AF0300000)")
-            if not github_link:
-                errors.append("GitHub link is required")
-            if not github_token:
-                errors.append("GitHub token is required")
-            if not password:
-                errors.append("Password is required")
-            
-            if errors:
-                for error in errors:
-                    st.error(f"⚠️ {error}")
-                return
-            
-            owner, repo = extract_owner_repo(github_link)
-            if not owner or not repo:
-                st.error("❌ Invalid GitHub URL")
-                return
-            
-            if not is_github_repo_public(github_token, owner, repo):
-                return
-            
-            existing_user = login_db.users.find_one({"username": username})
-            existing_repo = login_db.users.find_one({"github_link": github_link})
-            
-            if existing_user and existing_repo:
-                st.error("❌ Both username and GitHub link already exist")
-            elif existing_user:
-                st.error("❌ Username already exists")
-            elif existing_repo:
-                st.error("❌ GitHub link already registered")
-            else:
-                try:
-                    login_db.users.insert_one({
-                        "name": name,
-                        "username": username,
-                        "github_link": github_link,
-                        "github_token": github_token,
-                        "password": password,
-                        "role": "student",
-                        "created_at": datetime.now().isoformat(),
-                        "last_login": None
-                    })
-                    
-                    st.success("✅ Registration successful! Please login.")
-                    st.balloons()
-                    
-                    if st.button("🔑 Go to Login", width='stretch'):
-                        st.session_state.current_page = "Login"
-                        st.rerun()
-                
-                except Exception as e:
-                    st.error(f"❌ Registration failed: {e}")
+            github_link = st.text_input(
+                "🔗 GitHub Repository",
+                placeholder="https://github.com/username/repo"
+            )
+
+            github_token = st.text_input(
+                "🔑 GitHub Token",
+                type="password",
+                placeholder="Your GitHub personal access token"
+            )
+
+        password = st.text_input(
+            "🔒 Password",
+            type="password",
+            placeholder="Create a strong password"
+        )
+
+        register_submit = st.form_submit_button(
+            "✅ Register",
+            width="stretch"
+        )
+
+    # Form submission logic
+    if register_submit:
+
+        errors = []
+
+        if not name.strip():
+            errors.append("Name is required")
+
+        if not validate_username(username):
+            errors.append("Invalid username format (e.g., AF0300000)")
+
+        if not github_link:
+            errors.append("GitHub link is required")
+
+        if not github_token:
+            errors.append("GitHub token is required")
+
+        if not password:
+            errors.append("Password is required")
+
+        if errors:
+            for error in errors:
+                st.error(f"⚠️ {error}")
+            return
+
+        owner, repo = extract_owner_repo(github_link)
+
+        if not owner or not repo:
+            st.error("❌ Invalid GitHub URL")
+            return
+
+        if not is_github_repo_public(github_token, owner, repo):
+            return
+
+        existing_user = login_db.users.find_one({"username": username})
+        existing_repo = login_db.users.find_one({"github_link": github_link})
+
+        if existing_user and existing_repo:
+            st.error("❌ Both username and GitHub link already exist")
+            return
+
+        if existing_user:
+            st.error("❌ Username already exists")
+            return
+
+        if existing_repo:
+            st.error("❌ GitHub link already registered")
+            return
+
+        try:
+
+            login_db.users.insert_one({
+                "name": name,
+                "username": username,
+                "github_link": github_link,
+                "github_token": github_token,
+                "password": password,
+                "role": "student",
+                "created_at": datetime.now().isoformat(),
+                "last_login": None
+            })
+
+            st.success("✅ Registration successful! Please login.")
+            st.balloons()
+
+            if st.button("🔑 Go to Login", width="stretch"):
+                st.session_state.current_page = "Login"
+                st.rerun()
+
+        except Exception as e:
+            st.error(f"❌ Registration failed: {e}")
 
 def homepage():
     """Enhanced homepage"""
