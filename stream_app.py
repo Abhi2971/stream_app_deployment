@@ -401,7 +401,7 @@ def homepage():
     """Enhanced homepage"""
     st.markdown("""
     <div class="app-header">
-        <h1>📚 Welcome to Student Assignment Tracker</h1>
+        <h3>📚 Welcome to Student Assignment Tracker</h3>
         <p>Track, manage, and analyze student assignments with GitHub integration</p>
     </div>
     """, unsafe_allow_html=True)
