@@ -473,10 +473,6 @@ def register_user():
             st.success("✅ Registration successful! Please login.")
             st.balloons()
 
-            if st.button("🔑 Go to Login", width="stretch"):
-                st.session_state.current_page = "Login"
-                st.rerun()
-
         except Exception as e:
             st.error(f"❌ Registration failed: {e}")
 
