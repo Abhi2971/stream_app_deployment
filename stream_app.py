@@ -47,8 +47,8 @@ def header():
     col1, col2, col3, col4 = st.columns([2, 3, 2, 1])
     
     with col1:
-        # st.markdown(f"# {config.APP_ICON} {config.APP_TITLE.replace(config.APP_ICON, '').strip()}")
-        st.markdown("Abhi")
+        st.markdown(f"## {config.APP_ICON} {config.APP_TITLE.replace(config.APP_ICON, '').strip()}")
+        # st.markdown("Abhi")
     
     with col3:
         if st.session_state.logged_in:
